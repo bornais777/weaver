@@ -1,0 +1,1219 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#ECEFEB">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png">
+<script>if("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(function(e){console.warn(e)});</script>
+</head>
+<body style="margin:0">
+<title>思维结构编织器</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@500;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: 单栏手机优先的阅读工具。顶栏 + 内容列(≤720px) + 底部三栏切换 + 右下“拍一页”悬浮球。经纬线隐喻只出现在品牌标记和关联图里。 */
+:root{
+  --bg:#ECEFEB;      /* 带一点青的灰白，像日光下的书页 */
+  --surface:#F7F8F5;
+  --raise:#FFFFFF;
+  --ink:#1B2127;
+  --ink-2:#48525B;
+  --ink-3:#7A848C;
+  --line:#D6DBD4;
+  --line-2:#E3E7E1;
+  --accent:#2C4E6D;  /* 靛青：你的连接、主要操作 */
+  --accent-soft:#DCE4EB;
+  --red:#AE4630;     /* 朱砂：公认关联（按规划“标红”） */
+  --red-soft:#F0DDD6;
+  --ok:#4A7657;
+  --shadow:0 1px 0 rgba(27,33,39,.04),0 6px 20px -12px rgba(27,33,39,.25);
+  --f-display:"Noto Serif SC","Songti SC","STSong","SimSun",serif;
+  --f-body:system-ui,-apple-system,"PingFang SC","Hiragino Sans GB","Noto Sans SC","Microsoft YaHei",sans-serif;
+  --f-mono:"IBM Plex Mono",ui-monospace,"SFMono-Regular",Menlo,monospace;
+  --r:10px;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#13171A;--surface:#1A1F23;--raise:#21272C;--ink:#E3E6E2;--ink-2:#B1B8B4;--ink-3:#7E8783;--line:#2D343A;--line-2:#262C31;
+  --accent:#93B6D3;--accent-soft:#233646;--red:#E27C63;--red-soft:#3B2620;--ok:#86B794;
+  --shadow:0 1px 0 rgba(0,0,0,.2),0 8px 24px -14px rgba(0,0,0,.6);color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#13171A;--surface:#1A1F23;--raise:#21272C;--ink:#E3E6E2;--ink-2:#B1B8B4;--ink-3:#7E8783;--line:#2D343A;--line-2:#262C31;
+  --accent:#93B6D3;--accent-soft:#233646;--red:#E27C63;--red-soft:#3B2620;--ok:#86B794;
+  --shadow:0 1px 0 rgba(0,0,0,.2),0 8px 24px -14px rgba(0,0,0,.6);color-scheme:dark}
+
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.65;-webkit-font-smoothing:antialiased}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:30;background:var(--bg)}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:6px}
+.wrap{max-width:720px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+h1,h2,h3{font-family:var(--f-display);font-weight:700;text-wrap:balance;margin:0;letter-spacing:.01em}
+.mono{font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+.muted{color:var(--ink-3)}
+.label{font-size:12px;letter-spacing:.12em;color:var(--ink-3)}
+
+/* top */
+.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;background:var(--bg)}
+.top .wrap{display:flex;align-items:center;gap:10px;padding-block:12px}
+.brand{display:flex;align-items:center;gap:10px;min-width:0}
+.brand b{font-family:var(--f-display);font-size:17px;letter-spacing:.06em;white-space:nowrap}
+.brand svg{flex:none}
+.sync{margin-left:auto;display:flex;align-items:center;gap:6px;font-size:12px;color:var(--ink-3);white-space:nowrap}
+.sync i{width:7px;height:7px;border-radius:50%;background:var(--ink-3);display:block}
+.sync.on i{background:var(--ok)}
+.iconbtn{display:inline-grid;place-items:center;width:38px;height:38px;border-radius:50%;border:0;background:transparent;color:var(--ink-2)}
+.iconbtn:hover{background:var(--line-2)}
+
+main{padding-bottom:140px}
+.section{display:grid;gap:12px;padding-block:14px}
+.section-h{display:flex;align-items:baseline;justify-content:space-between;gap:12px}
+.section-h h2{font-size:18px}
+
+/* buttons */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;border:1px solid var(--line);background:var(--raise);border-radius:999px;padding:8px 16px;font-size:14px;color:var(--ink);white-space:nowrap}
+.btn:hover{border-color:var(--ink-3)}
+.btn.primary{background:var(--ink);border-color:var(--ink);color:var(--surface)}
+.btn.primary:hover{opacity:.9}
+.btn.ghost{background:transparent}
+.btn.small{padding:5px 12px;font-size:13px}
+.btn.danger{color:var(--red);border-color:var(--red-soft)}
+.btn[disabled]{opacity:.45;pointer-events:none}
+.linkbtn{border:0;background:none;padding:0;color:var(--accent);font-size:13px}
+
+/* example banner */
+.banner{display:flex;align-items:center;gap:10px;flex-wrap:wrap;font-size:13px;color:var(--ink-2);background:var(--accent-soft);border-radius:var(--r);padding:10px 14px;margin-top:6px}
+.banner span{flex:1;min-width:12em}
+
+/* mode picker */
+.modes{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+@media (max-width:520px){.modes{grid-template-columns:1fr}}
+.mode{position:relative;text-align:left;border:1px solid var(--line);background:var(--surface);border-radius:var(--r);padding:12px 14px;display:grid;gap:4px}
+.mode b{font-family:var(--f-display);font-size:16px;font-weight:500}
+.mode span{font-size:13px;color:var(--ink-2);line-height:1.5}
+.mode[aria-pressed="true"]{border-color:var(--ink);background:var(--raise);box-shadow:var(--shadow)}
+.mode[aria-pressed="true"]::after{content:"";position:absolute;top:14px;right:14px;width:8px;height:8px;border-radius:50%;background:var(--accent)}
+.startrow{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.select,.input{border:1px solid var(--line);background:var(--raise);border-radius:999px;padding:8px 14px;font-size:14px;min-width:0}
+.select{flex:1;min-width:10em}
+.input.block{border-radius:var(--r);width:100%}
+textarea.input{border-radius:var(--r);resize:vertical}
+
+/* lists */
+.list{display:grid;border-top:1px solid var(--line)}
+.row{display:grid;grid-template-columns:1fr auto;gap:4px 12px;align-items:baseline;padding:12px 2px;border:0;border-bottom:1px solid var(--line);background:none;text-align:left;width:100%}
+.row:hover{background:linear-gradient(90deg,transparent,var(--line-2),transparent)}
+.row .t{font-family:var(--f-display);font-weight:500;font-size:16px;min-width:0;overflow-wrap:anywhere}
+.row .d{font-size:12px;color:var(--ink-3);white-space:nowrap}
+.row .s{grid-column:1/-1;font-size:13px;color:var(--ink-2);min-width:0;overflow-wrap:anywhere}
+.tag{display:inline-block;font-size:11px;letter-spacing:.08em;padding:1px 8px;border-radius:999px;border:1px solid var(--line);color:var(--ink-2);margin-right:6px;vertical-align:1px;font-family:var(--f-body)}
+.tag.ask{border-color:var(--line)}
+.tag.fuzzy{border-style:dashed}
+.tag.diverge{border-color:var(--accent);color:var(--accent)}
+.tag.reading{background:var(--accent-soft);border-color:transparent;color:var(--accent)}
+.tag.done{border-color:var(--ok);color:var(--ok)}
+.tag.dropped{color:var(--ink-3);text-decoration:line-through}
+.empty{border:1px dashed var(--line);border-radius:var(--r);padding:20px;color:var(--ink-2);font-size:14px;display:grid;gap:8px}
+.empty b{font-family:var(--f-display);font-weight:500;color:var(--ink);font-size:16px}
+
+/* session */
+.bar{display:flex;align-items:center;gap:8px;padding-block:6px 10px;border-bottom:1px solid var(--line)}
+.bar .ttl{flex:1;min-width:0}
+.bar .ttl b{display:block;font-family:var(--f-display);font-weight:500;font-size:16px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bar .ttl small{font-size:12px;color:var(--ink-3)}
+.thread{display:grid;gap:16px;padding-block:18px}
+.msg{min-width:0;overflow-wrap:anywhere}
+.msg.me{justify-self:end;max-width:86%;background:var(--raise);border:1px solid var(--line);border-radius:14px 14px 4px 14px;padding:9px 14px;white-space:pre-wrap}
+.msg.ai{max-width:100%;padding-left:14px;border-left:2px solid var(--line)}
+.msg.ai p{margin:0 0 .6em}.msg.ai p:last-child{margin:0}
+.msg.ai ul,.msg.ai ol{margin:.2em 0 .6em;padding-left:1.3em}
+.msg.ai strong{font-weight:600}
+.msg.cap{border:1px solid var(--line);background:var(--surface);border-radius:var(--r);padding:10px 14px;display:grid;gap:6px}
+.loc{font-family:var(--f-mono);font-size:12px;color:var(--ink-3);display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.hl{font-family:var(--f-display);font-size:15px;line-height:1.7;padding-left:10px;border-left:2px solid var(--ink-2);margin:0}
+.msg.note{font-size:13px;color:var(--accent);padding-left:14px;display:flex;gap:6px}
+.msg.note::before{content:"注";font-family:var(--f-display);font-weight:700}
+.thinking{color:var(--ink-3);font-size:14px}
+.thinking::after{content:"";display:inline-block;width:1.2em;text-align:left;animation:dots 1.2s steps(4) infinite}
+@keyframes dots{0%{content:""}25%{content:"·"}50%{content:"··"}75%{content:"···"}}
+
+.composer{position:fixed;left:0;right:0;bottom:0;z-index:15;background:var(--bg);border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom,0px)}
+.composer .wrap{display:flex;gap:8px;align-items:flex-end;padding-block:10px}
+.composer textarea{flex:1;min-width:0;border:1px solid var(--line);background:var(--raise);border-radius:20px;padding:9px 16px;resize:none;max-height:160px;line-height:1.5}
+.composer .send{width:40px;height:40px;border-radius:50%;border:0;background:var(--ink);color:var(--surface);display:grid;place-items:center;flex:none}
+.composer .send[disabled]{opacity:.35}
+.composer .iconbtn{flex:none}
+.composer-note{font-size:12px;color:var(--ink-3);padding-bottom:4px}
+
+/* gain card */
+.gain{background:var(--raise);border:1px solid var(--line);border-radius:14px;padding:18px;display:grid;gap:14px;box-shadow:var(--shadow)}
+.gain header{display:flex;justify-content:space-between;gap:10px;align-items:baseline;flex-wrap:wrap}
+.gain h3{font-size:17px}
+.gain dl{margin:0;display:grid;gap:12px}
+.gain dt{font-size:12px;letter-spacing:.12em;color:var(--ink-3)}
+.gain dd{margin:2px 0 0}
+.gain dd ul{margin:0;padding-left:1.1em}
+.gain dd li{margin:.15em 0}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{font-size:12px;border-radius:999px;padding:2px 10px;background:var(--line-2);color:var(--ink-2);border:0}
+.chip.mine{background:var(--accent-soft);color:var(--accent)}
+.chip.known{background:var(--red-soft);color:var(--red)}
+
+/* graph */
+.legend{display:flex;gap:16px;flex-wrap:wrap;font-size:12px;color:var(--ink-2)}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.legend i{display:block;width:22px;height:0;border-top:2px solid var(--accent)}
+.legend i.k{border-top:1.5px solid var(--red)}
+.graphbox{background:var(--surface);border:1px solid var(--line);border-radius:14px;overflow:hidden;position:relative}
+.graphbox svg{display:block;width:100%;height:auto;touch-action:manipulation}
+.graphbox .nodes text{font-family:var(--f-body);font-size:13px;fill:var(--ink);paint-order:stroke;stroke:var(--surface);stroke-width:3px;stroke-linejoin:round}
+.graphbox .areas text{font-family:var(--f-display);font-size:14px;fill:var(--ink-3);opacity:.55;letter-spacing:.2em}
+.stats{display:flex;gap:18px;flex-wrap:wrap}
+.stat b{display:block;font-family:var(--f-mono);font-size:22px;font-weight:500;line-height:1.2}
+.stat span{font-size:12px;color:var(--ink-3)}
+.detail{background:var(--raise);border:1px solid var(--line);border-radius:var(--r);padding:14px 16px;display:grid;gap:8px}
+.detail h3{font-size:16px}
+.arearow{display:grid;grid-template-columns:1fr auto;gap:2px 12px;padding:10px 2px;border:0;border-bottom:1px solid var(--line);background:none;text-align:left;width:100%}
+.arearow[aria-pressed="true"] .an{color:var(--accent)}
+.arearow .an{font-family:var(--f-display);font-weight:500}
+.arearow .am{font-family:var(--f-mono);font-size:12px;color:var(--ink-3);white-space:nowrap}
+.arearow .at{grid-column:1/-1;font-size:12px;color:var(--ink-2)}
+
+.nav{border:1px solid var(--line);border-radius:14px;background:var(--surface)}
+.nav summary{list-style:none;cursor:pointer;padding:14px 16px;display:flex;align-items:center;gap:10px}
+.nav summary::-webkit-details-marker{display:none}
+.nav summary b{font-family:var(--f-display);font-weight:500}
+.nav summary .chev{margin-left:auto;transition:transform .2s}
+.nav[open] summary .chev{transform:rotate(180deg)}
+.nav .navbody{padding:0 16px 16px;display:grid;gap:12px}
+.path{display:grid;gap:3px;padding:10px 0;border-top:1px solid var(--line)}
+.path b{font-weight:600}
+.path .why{font-size:13px;color:var(--ink-2)}
+
+/* shelf */
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:999px;padding:3px;background:var(--surface);flex-wrap:wrap}
+.seg button{border:0;background:none;border-radius:999px;padding:4px 12px;font-size:13px;color:var(--ink-2)}
+.seg button[aria-pressed="true"]{background:var(--ink);color:var(--surface)}
+.bookhead{display:grid;gap:8px;padding-block:8px 4px}
+.bookhead h1{font-size:26px;line-height:1.3}
+.review{display:grid;gap:4px;padding:12px 0;border-bottom:1px solid var(--line)}
+.review .q{font-family:var(--f-display);font-size:15px;color:var(--ink);margin:2px 0}
+.review .q::before{content:"「";color:var(--ink-3)}.review .q::after{content:"」";color:var(--ink-3)}
+.review .open{font-size:13px;color:var(--red)}
+.review .open::before{content:"悬而未决 · "}
+.rgroup h3{font-size:15px;display:flex;align-items:baseline;gap:8px}
+.rgroup h3 small{font-family:var(--f-body);font-weight:400;font-size:12px;color:var(--ink-3)}
+
+/* tabs + ball */
+.tabs{position:fixed;left:0;right:0;bottom:0;z-index:15;background:var(--surface);border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom,0px)}
+.tabs .wrap{display:grid;grid-template-columns:repeat(3,1fr)}
+.tabs button{border:0;background:none;display:grid;justify-items:center;gap:2px;padding:8px 0 9px;font-size:12px;color:var(--ink-3)}
+.tabs button[aria-current="page"]{color:var(--ink)}
+.tabs button[aria-current="page"] svg{color:var(--accent)}
+.ball{position:fixed;z-index:16;right:calc(18px + env(safe-area-inset-right,0px));bottom:calc(76px + env(safe-area-inset-bottom,0px));width:54px;height:54px;border-radius:50%;border:0;background:var(--ink);color:var(--surface);display:grid;place-items:center;box-shadow:0 10px 24px -10px rgba(0,0,0,.5)}
+.ball.insession{bottom:calc(80px + env(safe-area-inset-bottom,0px))}
+.ball.busy{animation:pulse 1.2s ease-in-out infinite}
+@keyframes pulse{50%{transform:scale(.92);opacity:.75}}
+
+/* sheet + toast */
+.sheet{position:fixed;inset:0;z-index:40;background:rgba(12,16,20,.35);display:grid;align-items:end}
+.sheet .panel{background:var(--surface);border-radius:18px 18px 0 0;max-height:88vh;overflow:auto;padding-bottom:calc(20px + env(safe-area-inset-bottom,0px))}
+.sheet .panel .wrap{display:grid;gap:14px;padding-block:18px}
+.field{display:grid;gap:6px;font-size:13px;color:var(--ink-2)}
+.radio{display:flex;gap:8px;align-items:flex-start;font-size:14px;color:var(--ink)}
+.radio input{margin-top:5px}
+.hint{font-size:12px;color:var(--ink-3);line-height:1.5}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(140px + env(safe-area-inset-bottom,0px));z-index:50;background:var(--ink);color:var(--surface);border-radius:999px;padding:9px 16px;font-size:14px;display:flex;gap:12px;align-items:center;max-width:calc(100vw - 32px);box-shadow:var(--shadow)}
+.toast button{border:0;background:none;color:var(--accent-soft);font-weight:600;padding:0}
+.confirm{display:flex;gap:8px;align-items:center;flex-wrap:wrap;font-size:13px;color:var(--red)}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+
+<header class="top">
+  <div class="wrap">
+    <div class="brand">
+      <svg width="26" height="26" viewBox="0 0 26 26" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="1.4"><path d="M3 8h20M3 13h20M3 18h20" opacity=".35"/><path d="M8 3c3 5-3 15 0 20M13 3c-3 5 3 15 0 20M18 3c3 5-3 15 0 20"/></g><circle cx="13" cy="13" r="2.2" fill="var(--red)"/></svg>
+      <b>思维结构编织器</b>
+    </div>
+    <div class="sync" id="sync"><i></i><span>仅本机</span></div>
+    <button class="iconbtn" data-act="settings" aria-label="设置"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg></button>
+  </div>
+</header>
+
+<main id="main"></main>
+
+<nav class="tabs" id="tabs">
+  <div class="wrap">
+    <button data-act="tab" data-tab="chat"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 5h16v11H9l-5 4z"/></svg>聊天</button>
+    <button data-act="tab" data-tab="map"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="6" cy="7" r="2.5"/><circle cx="18" cy="6" r="2"/><circle cx="15" cy="18" r="3"/><path d="M8.3 7.6l7.8-1.3M7.5 9.2l5.8 6.6M17.6 8l-1.6 7"/></svg>关联</button>
+    <button data-act="tab" data-tab="shelf"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M5 4v16M9 4v16M13.5 4.5l4 15.5M3 20h18"/></svg>书架</button>
+  </div>
+</nav>
+
+<button class="ball" id="ball" data-act="camera" aria-label="拍一页"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M4 8h3l2-2.5h6L17 8h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg></button>
+<input type="file" id="cam" accept="image/*" capture="environment" hidden>
+<input type="file" id="gal" accept="image/*" hidden>
+<div class="sheet" id="sheet" hidden></div>
+<div class="toast" id="toast" hidden></div>
+
+<script>
+(function(){
+"use strict";
+
+/* ---------- helpers ---------- */
+const $ = (s, el=document) => el.querySelector(s);
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+const arr = v => Array.isArray(v) ? v.filter(x => x != null && String(x).trim() !== "") : (v ? [v] : []);
+const norm = s => String(s || "").replace(/[《》〈〉「」“”"'\s·:：,，.。!！?？\-—]/g, "").toLowerCase();
+function fmtDate(ts){
+  if(!ts) return "";
+  const d = new Date(ts), n = new Date();
+  const p = x => String(x).padStart(2,"0");
+  if(d.toDateString() === n.toDateString()) return p(d.getHours()) + ":" + p(d.getMinutes());
+  if(d.getFullYear() === n.getFullYear()) return (d.getMonth()+1) + "月" + d.getDate() + "日";
+  return d.getFullYear() + "." + (d.getMonth()+1) + "." + d.getDate();
+}
+function md(src){
+  const lines = esc(src).split(/\n/);
+  let out = "", list = null, para = [];
+  const inline = s => s.replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>").replace(/`([^`]+)`/g, "<code>$1</code>");
+  const flushP = () => { if(para.length){ out += "<p>" + inline(para.join("<br>")) + "</p>"; para = []; } };
+  const flushL = () => { if(list){ out += "<" + list.t + ">" + list.items.map(i => "<li>" + inline(i) + "</li>").join("") + "</" + list.t + ">"; list = null; } };
+  for(const raw of lines){
+    const l = raw.trim();
+    let m;
+    if(!l){ flushP(); flushL(); continue; }
+    if((m = l.match(/^[-*•]\s+(.*)/))){ flushP(); if(!list || list.t !== "ul"){ flushL(); list = {t:"ul", items:[]}; } list.items.push(m[1]); continue; }
+    if((m = l.match(/^\d+[.)、]\s*(.*)/))){ flushP(); if(!list || list.t !== "ol"){ flushL(); list = {t:"ol", items:[]}; } list.items.push(m[1]); continue; }
+    if((m = l.match(/^#{1,4}\s+(.*)/))){ flushP(); flushL(); out += "<p><strong>" + inline(m[1]) + "</strong></p>"; continue; }
+    flushL(); para.push(l);
+  }
+  flushP(); flushL();
+  return out;
+}
+
+/* ---------- store ---------- */
+const LS_KEY = "weaver.v1";
+const Store = {
+  items: new Map(), col: null, mode: "local", pending: new Map(),
+  loadLocal(){
+    try{ const raw = localStorage.getItem(LS_KEY); if(raw) for(const it of JSON.parse(raw)) if(it && it.id) this.items.set(it.id, it); }catch(e){}
+  },
+  saveLocal(){ try{ localStorage.setItem(LS_KEY, JSON.stringify([...this.items.values()])); }catch(e){} },
+  get(id){ const it = this.items.get(id); return it && !it.deleted ? it : null; },
+  all(kind){ return [...this.items.values()].filter(it => !it.deleted && it.kind === kind); },
+  put(it){
+    it.updatedAt = Date.now();
+    this.items.set(it.id, it);
+    this.saveLocal();
+    if(this.col && !it.example) this.push(it.id);
+  },
+  del(id){
+    const it = this.items.get(id); if(!it) return;
+    if(it.example){ this.items.delete(id); this.saveLocal(); return; }
+    this.put({id, kind: it.kind, deleted: true});
+  },
+  push(id){
+    // 同一条记录同时只写一次；写的时候总是写最新状态
+    if(this.pending.get(id) === "running"){ this.pending.set(id, "again"); return; }
+    this.pending.set(id, "running");
+    const run = async () => {
+      const it = this.items.get(id);
+      try{ await this.col.doc(id).set(JSON.parse(JSON.stringify(it))); }
+      catch(e){ console.warn(e); toast("云端保存没成功，记录还在本机"); }
+      if(this.pending.get(id) === "again"){ this.pending.set(id, "running"); return run(); }
+      this.pending.delete(id);
+    };
+    run();
+  },
+  async connect(){
+    if(!window.claude || typeof window.claude.use !== "function") return;
+    try{
+      const [db, user] = await Promise.all([claude.use("db"), claude.use("user")]);
+      if(!db || !user) return;
+      const id = await user.id();
+      if(!id) return;
+      const col = db.collection("data/users/" + id);
+      const snap = await col.get();
+      const remote = new Map();
+      snap.docs.forEach(d => { const v = d.data(); if(v && v.id) remote.set(v.id, v); });
+      this.col = col; this.mode = "db";
+      for(const [rid, r] of remote){
+        const l = this.items.get(rid);
+        if(!l || (r.updatedAt || 0) >= (l.updatedAt || 0)) this.items.set(rid, r);
+      }
+      for(const [lid, l] of this.items){
+        if(l.example) continue;
+        const r = remote.get(lid);
+        if(!r || (l.updatedAt || 0) > (r.updatedAt || 0)) this.push(lid);
+      }
+      this.saveLocal();
+      setSync(); render();
+    }catch(e){ console.warn("db", e); }
+  }
+};
+
+/* ---------- AI ---------- */
+const API_KEY = "weaver.api";
+const AI = {
+  sample: null, limits: null,
+  async init(){
+    if(!window.claude || typeof window.claude.use !== "function") return;
+    try{
+      this.sample = await claude.use("sample");
+      if(this.sample){ try{ this.limits = await this.sample.limits(); }catch(e){} }
+    }catch(e){}
+    render();
+  },
+  cfg(){ try{ return JSON.parse(localStorage.getItem(API_KEY) || "{}"); }catch(e){ return {}; } },
+  saveCfg(c){ try{ localStorage.setItem(API_KEY, JSON.stringify(c)); }catch(e){} },
+  hasCustom(){ const c = this.cfg(); return !!(c.base && c.key && c.model); },
+  source(){
+    const c = this.cfg();
+    if(c.use === "custom" && this.hasCustom()) return "custom";
+    if(this.sample) return "claude";
+    if(this.hasCustom()) return "custom";
+    return null;
+  },
+  async ask(turns, {images = [], onText, signal, json = false, tier} = {}){
+    const src = this.source();
+    if(!src) throw {code: "no_ai"};
+    if(src === "claude"){
+      const opts = {signal};
+      if(images.length) opts.images = images;
+      if(tier) opts.modelTier = tier;
+      if(json) return await this.sample.json(turns, opts);
+      opts.cache = false;
+      if(onText) opts.onText = onText;
+      const r = await this.sample(turns, opts);
+      return r.text;
+    }
+    const text = await this.custom(turns, {images, signal, json});
+    if(json) return parseJSON(text);
+    if(onText) onText({text});
+    return text;
+  },
+  async custom(turns, {images, signal, json}){
+    const c = this.cfg();
+    const msgs = turns.map(t => ({role: t.role, content: t.content}));
+    if(images.length){
+      const last = msgs[msgs.length - 1];
+      const parts = [{type: "text", text: last.content}];
+      for(const b of images) parts.push({type: "image_url", image_url: {url: await blobToDataURL(b)}});
+      last.content = parts;
+    }
+    let res;
+    try{
+      res = await fetch(c.base.replace(/\/+$/, "") + "/chat/completions", {
+        method: "POST", signal,
+        headers: {"Content-Type": "application/json", "Authorization": "Bearer " + c.key},
+        body: JSON.stringify({model: c.model, messages: msgs, temperature: json ? 0.3 : 0.7})
+      });
+    }catch(e){
+      if(e && e.name === "AbortError") throw {code: "cancelled"};
+      throw {code: "blocked"};
+    }
+    if(!res.ok) throw {code: "http", message: "接口返回 " + res.status + "，检查地址、密钥和模型名"};
+    const d = await res.json();
+    return d.choices?.[0]?.message?.content || "";
+  }
+};
+function parseJSON(t){
+  const s = String(t || ""); const a = s.indexOf("{"), b = s.lastIndexOf("}");
+  if(a < 0 || b < a) throw {code: "bad_json"};
+  try{ return JSON.parse(s.slice(a, b + 1)); }catch(e){ throw {code: "bad_json"}; }
+}
+function errText(e){
+  const c = e && e.code;
+  return ({
+    no_ai: "还没有可用的 AI。在 Claude 里打开本页，或在设置里填自定义接口",
+    not_granted: "你没有允许本页使用 Claude，可以在本页的权限菜单里打开",
+    rate_limited: "请求太频繁了，等一会儿再试",
+    cancelled: "已停止",
+    blocked: "请求被拦截：在 Claude 里打开时连不了自定义接口，要把文件自托管后再用",
+    bad_json: "AI 返回的格式不对，再试一次",
+    images_unavailable: "这个页面现在不能发送图片",
+    http: e && e.message
+  })[c] || (e && e.message) || "出了点问题，再试一次";
+}
+function blobToDataURL(b){ return new Promise((ok, no) => { const r = new FileReader(); r.onload = () => ok(r.result); r.onerror = no; r.readAsDataURL(b); }); }
+async function compress(file){
+  const url = URL.createObjectURL(file);
+  try{
+    const img = await new Promise((ok, no) => { const i = new Image(); i.onload = () => ok(i); i.onerror = no; i.src = url; });
+    const max = 1600, k = Math.min(1, max / Math.max(img.naturalWidth, img.naturalHeight));
+    const c = document.createElement("canvas");
+    c.width = Math.round(img.naturalWidth * k); c.height = Math.round(img.naturalHeight * k);
+    c.getContext("2d").drawImage(img, 0, 0, c.width, c.height);
+    return await new Promise(ok => c.toBlob(ok, "image/jpeg", 0.85));
+  }finally{ URL.revokeObjectURL(url); }
+}
+
+/* ---------- domain ---------- */
+const MODES = {
+  ask: {name: "普通提问", short: "提问", desc: "卡在一个概念上，直接问。",
+    rule: "当前模式：普通提问。读者卡在某个概念或段落上。直接回答这个问题：先给要点，再给一两句必要的展开。不扩展到读者没问的内容。"},
+  fuzzy: {name: "模糊提问", short: "模糊", desc: "说不清的感觉：它在用什么方式，围猎什么。",
+    rule: "当前模式：模糊提问。读者有一种说不清的感觉，觉得作者在用某种方式围猎某个东西。你的任务是帮读者把这个感觉抓住：先用一句话复述你理解到的感觉，再给出 2 到 3 个可能的命名（作者在用什么手法、指向什么对象），每个一句话，让读者自己认领或否认。不替读者下定论。"},
+  diverge: {name: "自由发散", short: "发散", desc: "把书里的东西和别处连起来，先存下。",
+    rule: "当前模式：自由发散。读者在把书里的东西和别的东西连起来。你的任务是接住：用一句话把读者的连接复述清楚（把什么和什么连起来，凭什么）。如果这个连接在已有知识里有公认的对应（某个理论、作者、概念），用一句话点出名字即可。不讲课，不判断连接对错。最多问一个帮读者把连接说具体的问题。"}
+};
+const BASE_RULE = "你是嵌在一个读者个人思维记录工具里的阅读陪伴者。原则：读者不问，你不教；读者不问，你不评。不评价读者这个人，不说“你很有洞察力”之类的话，不下关于读者的结论，没被问时不给阅读建议。回答简洁，用中文，不用标题，适合在手机上读。读者的输入可能来自语音输入法，含同音错字，按语境理解，不要指出错字。";
+const STATUS = {reading: "在读", done: "读完", dropped: "弃了"};
+
+function locText(c){
+  return [c.bookTitle ? "《" + c.bookTitle + "》" : "", c.chapter, c.page ? "p." + c.page : ""].filter(Boolean).join(" · ") || "未识别出处";
+}
+function capText(c){
+  let t = locText(c);
+  if(c.highlights && c.highlights.length) t += "\n划线：\n" + c.highlights.map(h => "· " + h).join("\n");
+  else if(c.excerpt) t += "\n页面开头：" + c.excerpt;
+  return t;
+}
+function findBook(title){
+  const n = norm(title); if(!n) return null;
+  const books = Store.all("book");
+  return books.find(b => norm(b.title) === n) || books.find(b => { const m = norm(b.title); return m.length >= 2 && (m.includes(n) || n.includes(m)); }) || null;
+}
+function newBook(title, author, example){
+  const b = {id: uid(), kind: "book", title: String(title).replace(/[《》]/g, "").trim(), author: author || "", status: "reading", createdAt: Date.now()};
+  if(example) b.example = true;
+  Store.put(b); return b;
+}
+function minutesOf(s){
+  const ts = (s.messages || []).map(m => m.ts).filter(Boolean).sort((a, b) => a - b);
+  if(!ts.length) return 0;
+  let t = 0;
+  for(let i = 1; i < ts.length; i++) t += Math.min(ts[i] - ts[i-1], 8 * 60000);
+  return Math.max(1, Math.round(t / 60000 + 1));
+}
+const userQ = s => (s.messages || []).filter(m => m.role === "user" && !m.type).length;
+function sessionTitle(s){
+  if(s.summary && s.summary.title) return s.summary.title;
+  const first = (s.messages || []).find(m => m.role === "user" && !m.type);
+  if(first) return first.content.slice(0, 28) + (first.content.length > 28 ? "…" : "");
+  const cap = (s.messages || []).find(m => m.type === "capture");
+  if(cap) return "拍页 · " + cap.content.split("\n")[0];
+  return "新的一段";
+}
+function topicIndex(){
+  const map = new Map();
+  for(const s of Store.all("session")) for(const t of (s.summary?.topics || [])) if(t && t.name && !map.has(t.name)) map.set(t.name, t.area || "");
+  return map;
+}
+
+/* ---------- state ---------- */
+const st = {tab: "chat", view: null, newMode: "ask", newBook: "", shelfFilter: "reading", sel: null, areaFocus: null, nav: null, navBusy: false, busy: null, ctl: null, confirm: null};
+const activeSession = () => (st.view && st.view.type === "session") ? Store.get(st.view.id) : null;
+
+/* ---------- render ---------- */
+const main = $("#main");
+function render(){
+  const ses = activeSession();
+  document.querySelectorAll(".tabs button").forEach(b => b.setAttribute("aria-current", (!st.view && b.dataset.tab === st.tab) || (st.view && st.view.type === "book" && b.dataset.tab === "shelf") ? "page" : "false"));
+  $("#tabs").hidden = !!ses;
+  $("#ball").classList.toggle("insession", !!ses);
+  if(ses) return renderSession(ses);
+  if(st.view && st.view.type === "book"){ const b = Store.get(st.view.id); if(b) return renderBook(b); st.view = null; }
+  if(st.tab === "chat") return renderChatHome();
+  if(st.tab === "map") return renderMap();
+  return renderShelf();
+}
+function exampleBanner(){
+  const n = [...Store.items.values()].filter(i => i.example && !i.deleted).length;
+  if(!n) return "";
+  return `<div class="banner"><span>现在看到的是示例记录，用来演示三个模块。你自己的记录会和它们分开存。</span><button class="btn small" data-act="clear-examples">清除示例</button></div>`;
+}
+function aiNotice(){
+  if(AI.source()) return "";
+  return `<div class="banner"><span>AI 还没接上：在 Claude 里打开本页会自动使用 Claude；自托管时请在设置里填接口。没有 AI 时也能记录文字。</span><button class="btn small" data-act="settings">设置</button></div>`;
+}
+
+function renderChatHome(){
+  const books = Store.all("book").filter(b => b.status !== "dropped").sort((a, b) => (b.updatedAt||0) - (a.updatedAt||0));
+  const sessions = Store.all("session").sort((a, b) => (b.updatedAt||0) - (a.updatedAt||0));
+  main.innerHTML = `<div class="wrap">
+    ${exampleBanner()}${aiNotice()}
+    <section class="section">
+      <div class="section-h"><h2>开一段</h2><span class="label">选一种问法</span></div>
+      <div class="modes">${Object.entries(MODES).map(([k, m]) => `<button class="mode" data-act="pick-mode" data-mode="${k}" aria-pressed="${st.newMode === k}"><b>${m.name}</b><span>${m.desc}</span></button>`).join("")}</div>
+      <div class="startrow">
+        <select class="select" id="newbook" aria-label="关于哪本书">
+          <option value="">不指定书（拍页时会自动认出）</option>
+          ${books.map(b => `<option value="${b.id}" ${st.newBook === b.id ? "selected" : ""}>《${esc(b.title)}》</option>`).join("")}
+        </select>
+        <button class="btn primary" data-act="start">开始</button>
+      </div>
+    </section>
+    <section class="section">
+      <div class="section-h"><h2>最近</h2><span class="label mono">${sessions.length} 段</span></div>
+      ${sessions.length ? `<div class="list">${sessions.slice(0, 30).map(sessionRow).join("")}</div>` :
+        `<div class="empty"><b>还没有对话</b>读到卡住、说不清、或者突然想到别处的时候，开一段。也可以直接点右下角拍一页，它会静默记下书名、章节和划线。<div><button class="btn small" data-act="load-examples">看看示例</button></div></div>`}
+    </section>
+  </div>`;
+}
+function sessionRow(s){
+  const b = s.bookId ? Store.get(s.bookId) : null;
+  const sub = s.summary ? (s.summary.card?.understandings?.[0] || s.summary.card?.connections?.[0] || "") : (s.endedAt ? "" : "进行中");
+  return `<button class="row" data-act="open-session" data-id="${s.id}">
+    <span class="t">${esc(sessionTitle(s))}</span><span class="d mono">${fmtDate(s.updatedAt)}</span>
+    <span class="s"><span class="tag ${s.mode}">${MODES[s.mode]?.short || ""}</span>${b ? "《" + esc(b.title) + "》 " : ""}${esc(sub)}</span>
+  </button>`;
+}
+
+function renderSession(s){
+  const b = s.bookId ? Store.get(s.bookId) : null;
+  const ended = !!s.endedAt;
+  const msgs = (s.messages || []).map(msgHTML).join("");
+  const busy = st.busy && st.busy.sid === s.id;
+  main.innerHTML = `<div class="wrap">
+    <div class="bar">
+      <button class="iconbtn" data-act="back" aria-label="返回"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M15 5l-7 7 7 7"/></svg></button>
+      <div class="ttl"><b>${b ? "《" + esc(b.title) + "》" : esc(sessionTitle(s))}</b><small><span class="tag ${s.mode}">${MODES[s.mode].name}</span>${ended ? "已归纳" : "拍的页会记进这段"}</small></div>
+      ${ended ? `<button class="btn small ghost" data-act="reopen">继续</button>` : `<button class="btn small" data-act="end" ${busy || !(s.messages||[]).length ? "disabled" : ""}>结束并归纳</button>`}
+    </div>
+    <div class="thread" id="thread">
+      ${msgs || `<div class="empty"><b>${MODES[s.mode].name}</b>${MODES[s.mode].desc}<span class="hint">打字，或者用输入法自带的语音键说。拍照按钮会把这一页记进来。</span></div>`}
+      ${busy && st.busy.kind === "reply" ? `<div class="msg ai" id="live"><span class="thinking">在想</span></div>` : ""}
+      ${busy && st.busy.kind === "end" ? `<div class="thinking">在整理这段的收获</div>` : ""}
+      ${s.summary ? gainCard(s) : ""}
+    </div>
+  </div>
+  ${ended ? "" : `<div class="composer"><div class="wrap">
+    <button class="iconbtn" data-act="gallery" aria-label="从相册选一页"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3.5" y="4.5" width="17" height="15" rx="2"/><circle cx="9" cy="10" r="1.6"/><path d="M4 17l5-4.5 4 3.5 3-2.5 4 3.5"/></svg></button>
+    <textarea id="box" rows="1" placeholder="${s.mode === "fuzzy" ? "说说那种感觉…" : s.mode === "diverge" ? "想到了什么…" : "卡在哪里…"}">${esc(st.draft?.[s.id] || "")}</textarea>
+    ${busy && st.busy.kind === "reply" ? `<button class="send" data-act="stop" aria-label="停止"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="6" width="12" height="12" rx="2"/></svg></button>` :
+      `<button class="send" data-act="send" aria-label="发送"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button>`}
+  </div></div>`}`;
+  const box = $("#box");
+  if(box){ autosize(box); }
+  requestAnimationFrame(() => window.scrollTo(0, document.body.scrollHeight));
+}
+function msgHTML(m){
+  if(m.type === "capture"){
+    const c = Store.get(m.captureId);
+    const hls = c ? c.highlights : [];
+    return `<div class="msg cap"><div class="loc"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 8h3l2-2.5h6L17 8h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg>${esc(c ? locText(c) : m.content.split("\n")[0])}</div>
+      ${hls && hls.length ? hls.map(h => `<p class="hl">${esc(h)}</p>`).join("") : (c && c.excerpt ? `<span class="muted" style="font-size:13px">没有划线 · 页首：${esc(c.excerpt)}</span>` : "")}</div>`;
+  }
+  if(m.type === "note") return m.content ? `<div class="msg note">${esc(m.content)}</div>` : "";
+  if(m.role === "user") return `<div class="msg me">${esc(m.content)}</div>`;
+  return `<div class="msg ai">${md(m.content)}</div>`;
+}
+function gainCard(s){
+  const c = s.summary.card || {};
+  const blk = (k, label) => arr(c[k]).length ? `<div><dt>${label}</dt><dd><ul>${arr(c[k]).map(x => `<li>${esc(x)}</li>`).join("")}</ul></dd></div>` : "";
+  const links = arr(s.summary.links);
+  const topics = arr(s.summary.topics);
+  return `<article class="gain">
+    <header><h3>你拿到了什么</h3><span class="mono muted" style="font-size:12px">${minutesOf(s)} 分钟 · ${userQ(s)} 问</span></header>
+    <dl>
+      ${blk("understandings", "新理解")}
+      ${blk("connections", "新连接")}
+      ${blk("themes", "反复出现的主题")}
+      ${blk("open", "还没解决")}
+      ${c.drift ? `<div><dt>兴趣偏移</dt><dd>${esc(c.drift)}</dd></div>` : ""}
+    </dl>
+    ${links.length ? `<div class="chips">${links.map(l => `<span class="chip ${l.type === "known" ? "known" : "mine"}">${esc(l.a)} — ${esc(l.b)}</span>`).join("")}</div>` : ""}
+    ${topics.length ? `<div class="chips">${topics.map(t => `<span class="chip">${esc(t.name)}</span>`).join("")}</div>` : ""}
+  </article>`;
+}
+function autosize(t){ t.style.height = "auto"; t.style.height = Math.min(160, t.scrollHeight + 2) + "px"; }
+
+/* ---------- map ---------- */
+function graphData(){
+  const nodes = new Map(), edges = [];
+  const node = (name, area) => {
+    name = String(name || "").trim(); if(!name) return null;
+    let n = nodes.get(name);
+    if(!n){ n = {name, area: "", sessions: new Set(), q: 0, min: 0, books: new Set(), deg: 0}; nodes.set(name, n); }
+    if(area && !n.area) n.area = area;
+    return n;
+  };
+  for(const s of Store.all("session")){
+    if(!s.summary) continue;
+    const ts = arr(s.summary.topics), mins = minutesOf(s), q = userQ(s);
+    for(const t of ts){ const n = node(t.name, t.area); if(!n) continue; n.sessions.add(s.id); n.q += q; n.min += mins / ts.length; if(s.bookId) n.books.add(s.bookId); }
+    for(const l of arr(s.summary.links)){
+      const a = node(l.a), b = node(l.b); if(!a || !b || a === b) continue;
+      edges.push({a: a.name, b: b.name, type: l.type === "known" ? "known" : "mine", summary: l.summary || "", sid: s.id});
+      a.deg++; b.deg++;
+    }
+  }
+  for(const n of nodes.values()) if(!n.area){
+    const e = edges.find(x => x.a === n.name || x.b === n.name);
+    const o = e && nodes.get(e.a === n.name ? e.b : e.a);
+    if(o && o.area) n.area = o.area;
+  }
+  const areas = new Map();
+  for(const n of nodes.values()){ if(!n.area) n.area = "未归区"; if(!areas.has(n.area)) areas.set(n.area, []); areas.get(n.area).push(n); }
+  return {nodes: [...nodes.values()], edges, areas};
+}
+function hash(s){ let h = 2166136261; for(const ch of s){ h ^= ch.codePointAt(0); h = Math.imul(h, 16777619); } return h >>> 0; }
+function layout(g, W, H){
+  const names = [...g.areas.keys()];
+  const C = {x: W/2, y: H/2}, R = Math.min(W, H) * 0.27;
+  const centers = new Map(names.map((a, i) => [a, names.length === 1 ? C : {x: C.x + R * Math.cos(i / names.length * Math.PI * 2 - Math.PI/2), y: C.y + R * Math.sin(i / names.length * Math.PI * 2 - Math.PI/2)}]));
+  const P = new Map();
+  g.nodes.forEach(n => { const c = centers.get(n.area), h = hash(n.name); P.set(n.name, {x: c.x + ((h % 100) - 50), y: c.y + (((h >> 8) % 100) - 50), vx: 0, vy: 0}); });
+  const list = g.nodes.map(n => P.get(n.name));
+  for(let t = 0; t < 320; t++){
+    for(let i = 0; i < list.length; i++) for(let j = i + 1; j < list.length; j++){
+      const a = list[i], b = list[j]; let dx = a.x - b.x, dy = a.y - b.y, d2 = dx*dx + dy*dy + 0.01;
+      const f = Math.min(8, 1800 / d2), d = Math.sqrt(d2);
+      a.vx += dx / d * f; a.vy += dy / d * f; b.vx -= dx / d * f; b.vy -= dy / d * f;
+    }
+    for(const e of g.edges){
+      const a = P.get(e.a), b = P.get(e.b); const dx = b.x - a.x, dy = b.y - a.y, d = Math.sqrt(dx*dx + dy*dy) + 0.01;
+      const f = (d - 85) * 0.02; a.vx += dx / d * f; a.vy += dy / d * f; b.vx -= dx / d * f; b.vy -= dy / d * f;
+    }
+    g.nodes.forEach(n => { const p = P.get(n.name), c = centers.get(n.area); p.vx += (c.x - p.x) * 0.012; p.vy += (c.y - p.y) * 0.012; });
+    for(const p of list){ p.vx *= 0.82; p.vy *= 0.82; p.x += p.vx; p.y += p.vy; }
+  }
+  if(list.length){
+    const xs = list.map(p => p.x), ys = list.map(p => p.y);
+    const minX = Math.min(...xs), maxX = Math.max(...xs), minY = Math.min(...ys), maxY = Math.max(...ys);
+    const m = 48, k = Math.min((W - m*2) / Math.max(1, maxX - minX), (H - m*2) / Math.max(1, maxY - minY), 1.6);
+    const ox = (W - (maxX - minX) * k) / 2, oy = (H - (maxY - minY) * k) / 2;
+    for(const p of list){ p.x = ox + (p.x - minX) * k; p.y = oy + (p.y - minY) * k; }
+  }
+  return P;
+}
+function graphSVG(g){
+  const W = 480, H = 460;
+  const P = layout(g, W, H);
+  const r = n => 6 + Math.sqrt(n.q + n.sessions.size * 2) * 2.4;
+  const dim = n => st.areaFocus && n.area !== st.areaFocus;
+  const selN = st.sel && st.sel.type === "node" ? st.sel.name : null;
+  const areaLabels = [...g.areas.entries()].map(([a, ns]) => {
+    const x = ns.reduce((s, n) => s + P.get(n.name).x, 0) / ns.length;
+    const y = Math.min(...ns.map(n => P.get(n.name).y)) - 30;
+    return `<text x="${x.toFixed(1)}" y="${Math.max(22, y).toFixed(1)}" text-anchor="middle">${esc(a)}</text>`;
+  }).join("");
+  const edges = g.edges.map((e, i) => {
+    const a = P.get(e.a), b = P.get(e.b);
+    const na = g.nodes.find(n => n.name === e.a), nb = g.nodes.find(n => n.name === e.b);
+    const op = (dim(na) && dim(nb)) ? 0.15 : 1;
+    const hot = st.sel && st.sel.type === "edge" && st.sel.i === i;
+    let d;
+    if(e.type === "mine"){
+      const mx = (a.x + b.x) / 2, my = (a.y + b.y) / 2, dx = b.x - a.x, dy = b.y - a.y, len = Math.sqrt(dx*dx + dy*dy) || 1;
+      const off = ((hash(e.a + e.b) % 2) ? 1 : -1) * Math.min(26, len * 0.12);
+      d = `M${a.x.toFixed(1)} ${a.y.toFixed(1)} Q${(mx - dy / len * off).toFixed(1)} ${(my + dx / len * off).toFixed(1)} ${b.x.toFixed(1)} ${b.y.toFixed(1)}`;
+    } else d = `M${a.x.toFixed(1)} ${a.y.toFixed(1)} L${b.x.toFixed(1)} ${b.y.toFixed(1)}`;
+    const color = e.type === "known" ? "var(--red)" : "var(--accent)";
+    return `<g opacity="${op}"><path d="${d}" fill="none" stroke="${color}" stroke-width="${hot ? 3.4 : e.type === "known" ? 1.4 : 2}" stroke-linecap="round"/><path d="${d}" fill="none" stroke="transparent" stroke-width="16" data-act="sel-edge" data-i="${i}" style="cursor:pointer"/></g>`;
+  }).join("");
+  const nodes = g.nodes.map(n => {
+    const p = P.get(n.name), rr = r(n), sel = selN === n.name;
+    return `<g data-act="sel-node" data-name="${esc(n.name)}" style="cursor:pointer" opacity="${dim(n) ? 0.25 : 1}">
+      <circle cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="${(rr + 10).toFixed(1)}" fill="transparent"/>
+      <circle cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="${rr.toFixed(1)}" fill="${sel ? "var(--ink)" : "var(--raise)"}" stroke="var(--ink-2)" stroke-width="1.3"/>
+      ${n.deg ? `<circle cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="2.2" fill="${sel ? "var(--raise)" : "var(--ink-2)"}"/>` : ""}
+      <text x="${p.x.toFixed(1)}" y="${(p.y + rr + 15).toFixed(1)}" text-anchor="middle">${esc(n.name)}</text></g>`;
+  }).join("");
+  return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="主题关联图"><g class="areas">${areaLabels}</g><g>${edges}</g><g class="nodes">${nodes}</g></svg>`;
+}
+function renderMap(){
+  const g = graphData();
+  const totalMin = Store.all("session").reduce((s, x) => s + minutesOf(x), 0);
+  const mine = g.edges.filter(e => e.type === "mine").length;
+  let detail = "";
+  if(st.sel && st.sel.type === "node"){
+    const n = g.nodes.find(x => x.name === st.sel.name);
+    if(n){
+      const es = g.edges.filter(e => e.a === n.name || e.b === n.name);
+      const books = [...n.books].map(id => Store.get(id)).filter(Boolean);
+      detail = `<div class="detail"><h3>${esc(n.name)}</h3>
+        <div class="loc">${esc(n.area)} · ${Math.round(n.min)} 分钟 · ${n.q} 问 · ${es.length} 条线</div>
+        ${books.length ? `<div class="chips">${books.map(b => `<button class="chip" data-act="open-book" data-id="${b.id}">《${esc(b.title)}》</button>`).join("")}</div>` : ""}
+        ${es.length ? es.map(e => `<div style="font-size:14px"><span class="chip ${e.type === "known" ? "known" : "mine"}">${e.type === "known" ? "公认" : "你的"}</span> ${esc(e.a === n.name ? e.b : e.a)}${e.summary ? `<div class="muted" style="font-size:13px">${esc(e.summary)}</div>` : ""}</div>`).join("") : ""}
+        <div class="list">${[...n.sessions].map(id => Store.get(id)).filter(Boolean).map(sessionRow).join("")}</div></div>`;
+    }
+  } else if(st.sel && st.sel.type === "edge"){
+    const e = g.edges[st.sel.i];
+    if(e){
+      const s = Store.get(e.sid);
+      detail = `<div class="detail"><span class="label">${e.type === "known" ? "公认关联" : "你自己的连接"}</span><h3>${esc(e.a)} — ${esc(e.b)}</h3>
+        <div>${esc(e.summary || "没有归纳")}</div>${s ? `<div class="list">${sessionRow(s)}</div>` : ""}</div>`;
+    }
+  }
+  main.innerHTML = `<div class="wrap">
+    ${exampleBanner()}
+    <section class="section">
+      <div class="section-h"><h2>关联</h2><div class="legend"><span><i></i>你的连接</span><span><i class="k"></i>公认关联</span></div></div>
+      <div class="stats">
+        <div class="stat"><b>${g.nodes.length}</b><span>主题</span></div>
+        <div class="stat"><b>${mine}</b><span>你连的线</span></div>
+        <div class="stat"><b>${g.edges.length - mine}</b><span>公认的线</span></div>
+        <div class="stat"><b>${(totalMin / 60).toFixed(1)}</b><span>小时</span></div>
+      </div>
+      ${g.nodes.length ? `<div class="graphbox">${graphSVG(g)}</div>${detail}` :
+        `<div class="empty"><b>网还没织起来</b>每段对话结束并归纳后，里面的主题和连接会自己归位到这里。${Store.all("session").length ? "" : `<div><button class="btn small" data-act="load-examples">看看示例</button></div>`}</div>`}
+    </section>
+    ${g.areas.size ? `<section class="section">
+      <div class="section-h"><h2>区域</h2><span class="label">点一下只看这一片</span></div>
+      <div class="list">${[...g.areas.entries()].sort((a, b) => b[1].length - a[1].length).map(([a, ns]) => {
+        const min = ns.reduce((s, n) => s + n.min, 0), q = ns.reduce((s, n) => s + n.q, 0);
+        const set = new Set(ns.map(n => n.name)); const lk = g.edges.filter(e => set.has(e.a) || set.has(e.b)).length;
+        return `<button class="arearow" data-act="area" data-area="${esc(a)}" aria-pressed="${st.areaFocus === a}"><span class="an">${esc(a)}</span><span class="am">${Math.round(min)} 分 · ${q} 问 · ${lk} 线</span><span class="at">${ns.map(n => esc(n.name)).join("、")}</span></button>`;
+      }).join("")}</div></section>` : ""}
+    <section class="section">
+      <details class="nav" ${st.nav || st.navBusy ? "open" : ""}>
+        <summary><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="9"/><path d="M15.5 8.5l-2 5-5 2 2-5z"/></svg><b>有点迷茫？</b><span class="muted" style="font-size:13px">从你的记录里找下一步</span><svg class="chev" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 9l6 6 6-6"/></svg></summary>
+        <div class="navbody">
+          <p class="hint" style="margin:0">只从你自己拍过、问过、连过的东西里找，给出具体的书、页和旧点。</p>
+          ${st.nav ? navHTML(st.nav) : ""}
+          <div><button class="btn small ${st.nav ? "" : "primary"}" data-act="nav" ${st.navBusy ? "disabled" : ""}>${st.navBusy ? "在翻记录…" : st.nav ? "重新找" : "找路"}</button></div>
+        </div>
+      </details>
+    </section>
+  </div>`;
+}
+function navHTML(n){
+  return `${arr(n.facts).length ? `<div><span class="label">记录里的事实</span><ul style="margin:4px 0 0;padding-left:1.1em">${arr(n.facts).map(f => `<li>${esc(f)}</li>`).join("")}</ul></div>` : ""}
+    <div>${arr(n.paths).map(p => `<div class="path"><b>${esc(p.point || p.label || "")}</b><span class="loc">${esc([p.book ? "《" + String(p.book).replace(/[《》]/g, "") + "》" : "", p.loc].filter(Boolean).join(" · "))}</span>${p.why ? `<span class="why">${esc(p.why)}</span>` : ""}</div>`).join("")}</div>`;
+}
+
+/* ---------- shelf ---------- */
+function bookCounts(b){
+  const caps = Store.all("capture").filter(c => c.bookId === b.id);
+  const ses = Store.all("session").filter(s => s.bookId === b.id);
+  return {caps, ses, q: ses.reduce((s, x) => s + userQ(x), 0), hl: caps.reduce((s, c) => s + (c.highlights || []).length, 0)};
+}
+function renderShelf(){
+  const books = Store.all("book").sort((a, b) => (b.updatedAt||0) - (a.updatedAt||0));
+  const count = k => books.filter(b => k === "all" || b.status === k).length;
+  const shown = books.filter(b => st.shelfFilter === "all" || b.status === st.shelfFilter);
+  main.innerHTML = `<div class="wrap">
+    ${exampleBanner()}
+    <section class="section">
+      <div class="section-h"><h2>书架</h2><span class="label mono">${books.length} 本</span></div>
+      <form class="startrow" data-form="addbook"><input class="input" style="flex:1" id="addbook" placeholder="书名，回车加入" autocomplete="off"><button class="btn" type="submit">加入</button></form>
+      <div class="seg" role="group" aria-label="筛选">${["reading", "done", "dropped", "all"].map(k => `<button data-act="shelf-filter" data-k="${k}" aria-pressed="${st.shelfFilter === k}">${k === "all" ? "全部" : STATUS[k]} <span class="mono">${count(k)}</span></button>`).join("")}</div>
+      ${shown.length ? `<div class="list">${shown.map(b => { const c = bookCounts(b); const last = Math.max(b.updatedAt || 0, ...c.caps.map(x => x.ts || 0), ...c.ses.map(x => x.updatedAt || 0));
+        return `<button class="row" data-act="open-book" data-id="${b.id}"><span class="t">《${esc(b.title)}》${b.author ? `<span class="muted" style="font-family:var(--f-body);font-size:13px;font-weight:400"> ${esc(b.author)}</span>` : ""}</span><span class="d mono">${fmtDate(last)}</span><span class="s"><span class="tag ${b.status}">${STATUS[b.status]}</span><span class="mono">划 ${c.hl} · 拍 ${c.caps.length} · 问 ${c.q} · 段 ${c.ses.length}</span></span></button>`; }).join("")}</div>` :
+        `<div class="empty"><b>${books.length ? "这一栏是空的" : "书架是空的"}</b>拍一页时认出的书会自动上架，也可以在上面手动加。${books.length ? "" : `<div><button class="btn small" data-act="load-examples">看看示例</button></div>`}</div>`}
+    </section>
+  </div>`;
+}
+function reviewEntries(b){
+  return Store.all("session").filter(s => s.bookId === b.id && s.summary && s.summary.review).sort((a, c) => (a.startedAt||0) - (c.startedAt||0));
+}
+function renderBook(b){
+  const c = bookCounts(b);
+  const revs = reviewEntries(b);
+  const topics = new Map();
+  c.ses.forEach(s => arr(s.summary?.topics).forEach(t => topics.set(t.name, t.area || "")));
+  const areas = [...new Set([...topics.values()].filter(Boolean))];
+  const timeline = [...c.caps.map(x => ({t: x.ts, cap: x})), ...c.ses.map(x => ({t: x.startedAt, s: x}))].sort((a, d) => (d.t||0) - (a.t||0));
+  main.innerHTML = `<div class="wrap">
+    <div class="bar"><button class="iconbtn" data-act="back" aria-label="返回"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M15 5l-7 7 7 7"/></svg></button><div class="ttl"><small>书架</small></div>
+      ${st.confirm === b.id ? `<span class="confirm">删掉这本书？对话和拍页会保留<button class="btn small danger" data-act="del-book" data-id="${b.id}">删除</button><button class="btn small ghost" data-act="cancel-confirm">取消</button></span>` : `<button class="btn small ghost" data-act="ask-del-book" data-id="${b.id}">删除</button>`}
+    </div>
+    <div class="bookhead">
+      <h1>《${esc(b.title)}》</h1>
+      <input class="input" id="author" data-id="${b.id}" value="${esc(b.author)}" placeholder="作者（可不填）" style="max-width:16em">
+      <div class="seg" role="group" aria-label="阅读状态">${Object.entries(STATUS).map(([k, v]) => `<button data-act="set-status" data-id="${b.id}" data-k="${k}" aria-pressed="${b.status === k}">${v}</button>`).join("")}</div>
+      <div class="stats" style="margin-top:6px">
+        <div class="stat"><b>${c.hl}</b><span>划线</span></div><div class="stat"><b>${c.caps.length}</b><span>拍页</span></div>
+        <div class="stat"><b>${c.q}</b><span>提问</span></div><div class="stat"><b>${c.ses.reduce((s, x) => s + minutesOf(x), 0)}</b><span>分钟</span></div>
+      </div>
+      ${areas.length ? `<div class="chips"><span class="label" style="align-self:center">连到</span>${areas.map(a => `<button class="chip mine" data-act="goto-area" data-area="${esc(a)}">${esc(a)}</button>`).join("")}</div>` : ""}
+    </div>
+    <section class="section">
+      <div class="section-h"><h2>回忆式复习</h2>${revs.length ? `<button class="linkbtn" data-act="copy-review" data-id="${b.id}">复制全文</button>` : ""}</div>
+      <p class="hint" style="margin:-4px 0 0">写给三个月后忘了这本书的自己。每段对话归纳时自动生成一条。</p>
+      ${revs.length ? Object.entries(MODES).map(([k, m]) => {
+        const list = revs.filter(s => s.mode === k);
+        if(!list.length) return "";
+        return `<div class="rgroup"><h3>${m.name}<small>${k === "ask" ? "卡在哪个概念，答案要点" : k === "fuzzy" ? "那种感觉是什么，后来抓到的是什么" : "把什么和什么连起来，凭什么，悬在哪"}</small></h3>
+          ${list.map(s => { const r = s.summary.review; return `<div class="review"><span class="loc">${esc(r.loc || "")}<button class="linkbtn" data-act="open-session" data-id="${s.id}">回到对话</button></span>
+            <div>${esc(r.before || "")}${r.after ? " " + esc(r.after) : ""}</div>${r.quote ? `<p class="q">${esc(r.quote)}</p>` : ""}${r.open ? `<span class="open">${esc(r.open)}</span>` : ""}</div>`; }).join("")}</div>`;
+      }).join("") : `<div class="empty">这本书的对话归纳后，复习条目会出现在这里，按三种问法分开。</div>`}
+    </section>
+    <section class="section">
+      <div class="section-h"><h2>痕迹</h2><span class="label mono">${timeline.length} 条</span></div>
+      ${timeline.length ? `<div class="list">${timeline.map(x => x.s ? sessionRow(x.s) : `<div class="row" style="cursor:default"><span class="t" style="font-family:var(--f-mono);font-size:13px;font-weight:400">${esc([x.cap.chapter, x.cap.page ? "p." + x.cap.page : ""].filter(Boolean).join(" · ") || "拍页")}</span><span class="d mono">${fmtDate(x.cap.ts)}</span><span class="s">${(x.cap.highlights || []).map(h => `<p class="hl" style="margin:4px 0">${esc(h)}</p>`).join("") || esc(x.cap.excerpt || "")}${x.cap.note ? `<span style="color:var(--accent);font-size:13px">注 · ${esc(x.cap.note)}</span>` : ""}</span></div>`).join("")}</div>` : `<div class="empty">还没有拍过或聊过这本书。</div>`}
+    </section>
+  </div>`;
+}
+
+/* ---------- sheet ---------- */
+function openSettings(){
+  const c = AI.cfg(); const src = AI.source();
+  const sh = $("#sheet");
+  sh.innerHTML = `<div class="panel" role="dialog" aria-label="设置"><div class="wrap">
+    <div class="section-h"><h2>设置</h2><button class="iconbtn" data-act="close-sheet" aria-label="关闭"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
+    <div class="field"><span class="label">AI 来源</span>
+      <label class="radio"><input type="radio" name="src" value="claude" ${c.use !== "custom" ? "checked" : ""}><span>Claude（在 Claude 里打开本页时自动可用，不用填密钥）${AI.sample ? "" : `<br><span class="hint">当前不可用</span>`}</span></label>
+      <label class="radio"><input type="radio" name="src" value="custom" ${c.use === "custom" ? "checked" : ""}><span>自定义接口（OpenAI 兼容，中转站、DeepSeek 等）<br><span class="hint">只在把文件自托管（如 GitHub Pages）时能用，Claude 里的页面不允许连外部地址。模型要支持看图，拍页才能识别。</span></span></label>
+    </div>
+    <label class="field">接口地址<input class="input block" id="api-base" value="${esc(c.base || "")}" placeholder="https://example.com/v1" autocomplete="off"></label>
+    <label class="field">密钥<input class="input block" id="api-key" type="password" value="${esc(c.key || "")}" placeholder="sk-…" autocomplete="off"></label>
+    <label class="field">模型名<input class="input block" id="api-model" value="${esc(c.model || "")}" placeholder="gpt-4o / gemini-2.5-flash …" autocomplete="off"></label>
+    <span class="hint">密钥只存在这台设备的浏览器里，不会进同步数据。现在在用：${src === "claude" ? "Claude" : src === "custom" ? "自定义接口" : "无"}</span>
+    <div class="startrow"><button class="btn primary" data-act="save-api">保存</button></div>
+    <hr style="border:0;border-top:1px solid var(--line);width:100%">
+    <div class="field"><span class="label">数据</span>
+      <span>${Store.mode === "db" ? "记录同步在你的 Claude 账号里，手机和电脑打开同一个页面都能看到。" : "记录只存在这台设备的浏览器里。清理浏览器数据会丢，记得定期导出。"}</span></div>
+    <div class="startrow">
+      <button class="btn small" data-act="export">导出备份</button>
+      <button class="btn small" data-act="show-import">导入备份</button>
+    </div>
+    <div id="io"></div>
+  </div></div>`;
+  sh.hidden = false;
+}
+function closeSheet(){ $("#sheet").hidden = true; $("#sheet").innerHTML = ""; }
+
+/* ---------- toast ---------- */
+let toastTimer;
+function toast(text, {action, sticky} = {}){
+  const t = $("#toast");
+  t.innerHTML = `<span>${esc(text)}</span>${action ? `<button data-act="toast-action">${esc(action.label)}</button>` : ""}`;
+  t._action = action ? action.fn : null;
+  t.hidden = false;
+  clearTimeout(toastTimer);
+  if(!sticky) toastTimer = setTimeout(() => { t.hidden = true; }, action ? 6000 : 2800);
+}
+function setSync(){
+  const el = $("#sync");
+  el.classList.toggle("on", Store.mode === "db");
+  el.querySelector("span").textContent = Store.mode === "db" ? "已同步" : "仅本机";
+}
+
+/* ---------- actions ---------- */
+function startSession(mode, bookId, cap){
+  const s = {id: uid(), kind: "session", mode, bookId: bookId || null, messages: [], startedAt: Date.now()};
+  if(cap){
+    s.messages.push({role: "user", type: "capture", captureId: cap.id, content: capText(cap), ts: Date.now()});
+    if(cap.note) s.messages.push({role: "assistant", type: "note", content: cap.note, ts: Date.now()});
+    cap.sessionId = s.id; Store.put(cap);
+  }
+  Store.put(s);
+  st.view = {type: "session", id: s.id};
+  render();
+}
+function buildTurns(s){
+  const b = s.bookId ? Store.get(s.bookId) : null;
+  const ctx = b ? `\n当前在读：《${b.title}》${b.author ? "，" + b.author : ""}。书名和术语以此为准。` : "";
+  const turns = [{role: "user", content: BASE_RULE + "\n" + MODES[s.mode].rule + ctx + "\n（以上是规则。下面开始对话。）"}, {role: "assistant", content: "好的。"}];
+  const msgs = (s.messages || []).slice(-40);
+  for(const m of msgs){
+    let content = m.type === "capture" ? "[拍照记录] " + m.content : m.type === "note" ? "[定位注释] " + m.content : m.content;
+    if(!content) continue;
+    const last = turns[turns.length - 1];
+    if(last.role === m.role) last.content += "\n\n" + content; else turns.push({role: m.role, content});
+  }
+  return turns;
+}
+async function send(){
+  const s = activeSession(); if(!s || s.endedAt) return;
+  const box = $("#box"); const text = box.value.trim(); if(!text) return;
+  if(st.busy) return;
+  s.messages.push({role: "user", content: text, ts: Date.now()});
+  if(st.draft) delete st.draft[s.id];
+  Store.put(s);
+  if(!AI.source()){ render(); toast("已记下。AI 没接上，这次没有回答"); return; }
+  st.busy = {sid: s.id, kind: "reply"}; st.ctl = new AbortController();
+  render();
+  try{
+    const text = await AI.ask(buildTurns(s), {signal: st.ctl.signal, onText: ({text}) => { const el = $("#live"); if(el) el.innerHTML = md(text); window.scrollTo(0, document.body.scrollHeight); }});
+    s.messages.push({role: "assistant", content: text, ts: Date.now()});
+    Store.put(s);
+  }catch(e){
+    if(e && e.text) { s.messages.push({role: "assistant", content: e.text, ts: Date.now()}); Store.put(s); }
+    if(!(e && e.code === "cancelled")) toast(errText(e));
+  }finally{ st.busy = null; st.ctl = null; render(); }
+}
+async function endSession(){
+  const s = activeSession(); if(!s || st.busy) return;
+  if(!AI.source()){ s.endedAt = Date.now(); Store.put(s); render(); toast("已结束。AI 没接上，没有生成归纳"); return; }
+  st.busy = {sid: s.id, kind: "end"}; render();
+  const b = s.bookId ? Store.get(s.bookId) : null;
+  const transcript = s.messages.map(m => m.type === "capture" ? "[拍照记录] " + m.content : m.type === "note" ? "[定位注释] " + m.content : (m.role === "user" ? "读者：" : "AI：") + m.content).join("\n\n").slice(-30000);
+  const existing = [...topicIndex().entries()].slice(0, 80).map(([n, a]) => n + (a ? "（" + a + "）" : "")).join("、") || "暂无";
+  const prompt = `你在帮一个读者整理他刚结束的一段读书对话。你只记录、归位、索引，不教、不评，不下"这个读者如何如何"的结论。
+对话模式：${MODES[s.mode].name}
+书：${b ? "《" + b.title + "》" : "未指定（可从拍照记录里判断）"}
+读者已有的主题（归位时优先复用这些名字和区域）：${existing}
+
+对话全文：
+${transcript}
+
+只返回一个 JSON 对象，字段如下：
+{
+ "title": "这段对话的标题，12 字以内，写清对象",
+ "card": {
+   "understandings": ["新理解，每条一句，写读者拿到的东西"],
+   "connections": ["读者建立的新连接，A 与 B，凭什么"],
+   "themes": ["这段里反复出现的主题"],
+   "open": ["还没解决的问题"],
+   "drift": "兴趣是否往别处偏了，一句话；没有就空字符串"
+ },
+ "topics": [{"name": "主题名，2 到 8 字", "area": "所属区域，2 到 6 字，如 政治哲学、叙事手法"}],
+ "links": [{"a": "主题名", "b": "主题名", "type": "mine 表示读者自己连的，known 表示公认的关联", "summary": "这条连接的归纳，一句话"}],
+ "review": {
+   "loc": "书名·章节·页码，没有的部分省略",
+   "before": "当时的困惑或联想，一句话，不用'这个''它'之类的指代，对象写全",
+   "after": "得到的理解，一到两句",
+   "quote": "读者在这段里最有代表性的一句原话，只修正语音识别错字",
+   "open": "悬而未决的地方，没有就空字符串"
+ }
+}
+要求：没有内容的数组留空；topics 1 到 4 个；links 只写对话里真实出现的连接，可以为空；review 按模式写：普通提问写卡在哪个概念和答案要点，模糊提问写那种感觉是什么、后来抓到的是什么，自由发散写把什么和什么连起来、凭什么、悬在哪。`;
+  try{
+    const r = await AI.ask([{role: "user", content: prompt}], {json: true});
+    s.summary = {
+      title: r.title || "",
+      card: r.card || {},
+      topics: arr(r.topics).filter(t => t && t.name).map(t => ({name: String(t.name).trim(), area: String(t.area || "").trim()})),
+      links: arr(r.links).filter(l => l && l.a && l.b).map(l => ({a: String(l.a).trim(), b: String(l.b).trim(), type: l.type === "known" ? "known" : "mine", summary: l.summary || ""})),
+      review: r.review || null
+    };
+    s.endedAt = Date.now();
+    Store.put(s);
+  }catch(e){ toast(errText(e)); }
+  finally{ st.busy = null; render(); }
+}
+async function handlePhoto(file){
+  if(!file) return;
+  if(!AI.source()){ toast("还没有可用的 AI，拍页识别需要它"); return; }
+  if(AI.source() === "claude" && AI.limits && !AI.limits.images){ toast("这个页面现在不能发送图片"); return; }
+  const s = activeSession(); const live = s && !s.endedAt ? s : null;
+  const ball = $("#ball"); ball.classList.add("busy");
+  toast("在认这一页…", {sticky: true});
+  try{
+    const blob = await compress(file);
+    const books = Store.all("book").map(b => "《" + b.title + "》").join("、") || "暂无";
+    const topics = [...topicIndex().keys()].slice(0, 60).join("、") || "暂无";
+    const hintBook = live && live.bookId ? Store.get(live.bookId) : null;
+    const prompt = `你在帮一个读者做阅读记录。图片是手机拍的 Kindle 墨水屏，或者手机阅读 App 的截图，可能有反光、摩尔纹、倾斜。你只做识别和定位，不解释书的内容。
+书架上已有：${books}
+${hintBook ? "读者此刻正在读《" + hintBook.title + "》，认不出书名时按这本处理。\n" : ""}读者已有的主题：${topics}
+
+只返回一个 JSON 对象：
+{"book":"书名，尽量用书架上已有的写法；认不出就空字符串","author":"作者，看不到就空","chapter":"章节名或编号，看不到就空","page":"页码、位置或百分比，看不到就空","highlights":["有划线时逐条写划线原文，没有划线就空数组"],"text_excerpt":"没有划线时，摘页面第一句，不超过 30 字","note":"一句定位和关联的注释：这一页在全书结构里的位置，或者和读者已有主题的关联。不解释内容，不评价，不超过 40 字"}`;
+    const r = await AI.ask([{role: "user", content: prompt}], {images: [blob], json: true});
+    let book = (r.book && findBook(r.book)) || hintBook || null;
+    if(!book && r.book) book = newBook(r.book, r.author);
+    if(book && r.author && !book.author){ book.author = r.author; Store.put(book); }
+    const cap = {id: uid(), kind: "capture", bookId: book ? book.id : null, bookTitle: book ? book.title : (r.book || ""), chapter: r.chapter || "", page: String(r.page || ""), highlights: arr(r.highlights).map(String), excerpt: r.text_excerpt || "", note: r.note || "", sessionId: live ? live.id : null, ts: Date.now()};
+    Store.put(cap);
+    if(live){
+      live.messages.push({role: "user", type: "capture", captureId: cap.id, content: capText(cap), ts: Date.now()});
+      if(cap.note) live.messages.push({role: "assistant", type: "note", content: cap.note, ts: Date.now()});
+      if(!live.bookId && book) live.bookId = book.id;
+      Store.put(live); render(); toast("记进这段对话了");
+    } else {
+      render();
+      toast("记下了：" + locText(cap) + (cap.highlights.length ? " · " + cap.highlights.length + " 处划线" : ""), {action: {label: "聊这页", fn: () => startSession(st.newMode, book ? book.id : null, cap)}});
+    }
+  }catch(e){ toast(errText(e)); }
+  finally{ ball.classList.remove("busy"); }
+}
+async function runNav(){
+  if(!AI.source()){ toast(errText({code: "no_ai"})); return; }
+  st.navBusy = true; render();
+  const g = graphData();
+  const data = {
+    books: Store.all("book").map(b => ({title: b.title, status: STATUS[b.status]})),
+    highlights: Store.all("capture").slice(-40).map(c => ({book: c.bookTitle, loc: [c.chapter, c.page && "p." + c.page].filter(Boolean).join(" "), text: (c.highlights || []).join(" / ").slice(0, 120)})),
+    open_questions: Store.all("session").flatMap(s => arr(s.summary?.card?.open).map(q => ({q, book: Store.get(s.bookId)?.title || ""}))).slice(-30),
+    topics: g.nodes.map(n => ({name: n.name, area: n.area, minutes: Math.round(n.min), questions: n.q, links: n.deg})),
+    my_links: g.edges.filter(e => e.type === "mine").map(e => e.a + "—" + e.b)
+  };
+  const prompt = `一个读者有点迷茫，不知道接下来读什么、想什么。下面是他自己的阅读记录。请只从这些记录里找事实，给出具体路径。不制造愧疚（不提"很久没读""半途而废"之类），不评价这个人，不推荐记录里没有的书。
+
+记录：
+${JSON.stringify(data)}
+
+只返回 JSON：
+{"facts":["从记录里查出的事实，2 到 4 条，比如哪个主题投入最多、哪个问题一直没解决"],"paths":[{"point":"具体的下一步，一句话，写清对象","book":"相关的书名","loc":"章节或页码，或旧问题、旧连接","why":"为什么推这条，一句话，只引用记录里的事实"}]}
+paths 给 2 到 3 条。`;
+  try{ st.nav = await AI.ask([{role: "user", content: prompt}], {json: true}); }
+  catch(e){ toast(errText(e)); }
+  finally{ st.navBusy = false; render(); }
+}
+
+/* ---------- examples ---------- */
+function loadExamples(){
+  const now = Date.now(), H = 3600e3, D = 24 * H;
+  const b1 = newBook("看不见的城市", "卡尔维诺", true);
+  const b2 = newBook("乡土中国", "费孝通", true);
+  const b3 = newBook("规训与惩罚", "福柯", true); b3.status = "dropped"; Store.put(b3);
+  const cap = (book, chapter, page, hls, note, ts, sid) => { const c = {id: uid(), kind: "capture", example: true, bookId: book.id, bookTitle: book.title, chapter, page, highlights: hls, excerpt: "", note, sessionId: sid || null, ts}; Store.put(c); return c; };
+  const mk = (mode, book, t0, msgs, summary) => {
+    const s = {id: uid(), kind: "session", example: true, mode, bookId: book.id, startedAt: t0, endedAt: t0 + 30 * 60e3, messages: msgs.map((m, i) => ({...m, ts: t0 + i * 3 * 60e3})), summary};
+    Store.put(s); return s;
+  };
+  const c1 = cap(b2, "差序格局", "27", ["我们的格局不是一捆一捆扎清楚的柴，而是好像把一块石头丢在水面上所发生的一圈圈推出去的波纹。"], "本书核心概念首次成形处；与你的主题“边界感”相关", now - 5 * D);
+  mk("ask", b2, now - 5 * D, [
+    {role: "user", type: "capture", captureId: c1.id, content: capText(c1)},
+    {role: "assistant", type: "note", content: c1.note},
+    {role: "user", content: "差序格局和团体格局到底差在哪，团体格局里就没有远近亲疏吗"},
+    {role: "assistant", content: "差别在**界限从哪里来**。\n- 团体格局：先有团体，界限由团体划定，团体内的人在权利上是平等的。\n- 差序格局：以自己为中心，界限随关系伸缩，远近决定了对待方式。\n团体格局里当然有亲疏，但亲疏不改变成员资格本身。"}
+  ], {title: "差序格局与团体格局", card: {understandings: ["差序格局和团体格局的分界在于界限的来源：团体划定，还是以自己为中心伸缩"], connections: [], themes: ["边界从哪里来"], open: ["现代城市里的人还算差序格局吗"], drift: ""},
+    topics: [{name: "差序格局", area: "社会结构"}, {name: "边界感", area: "社会结构"}],
+    links: [{a: "差序格局", b: "边界感", type: "known", summary: "费孝通用伸缩的界限解释亲疏"}],
+    review: {loc: "乡土中国·差序格局·p.27", before: "分不清差序格局和团体格局，以为团体格局里没有远近亲疏。", after: "两者的区别在界限的来源：团体格局由团体划定、成员资格平等；差序格局以自己为中心，界限随关系伸缩。", quote: "团体格局里就没有远近亲疏吗", open: "现代城市里的人际关系还算不算差序格局。"}});
+  const c2 = cap(b1, "城市与记忆之三", "11", ["城市不会泄露自己的过去，只会把它像手纹一样藏起来。"], "全书 55 座城市第三组；与你的主题“记忆的空间化”相关", now - 2 * D);
+  mk("fuzzy", b1, now - 2 * D, [
+    {role: "user", type: "capture", captureId: c2.id, content: capText(c2)},
+    {role: "user", content: "说不清，感觉卡尔维诺每写一座城都像在绕着一个东西转，但从来不说那个东西是什么"},
+    {role: "assistant", content: "我理解到的感觉是：每座城都像一次侧面的逼近，正面始终空着。\n可能的命名：\n1. 他在用**排除法**描述，写所有城市的反面，围出一座没写的城。\n2. 他在用**目录**的形式，让分类代替叙事，真正的对象藏在分类之间。\n3. 被围猎的对象是**马可·波罗自己的故乡威尼斯**，书里有一处几乎明说了。\n哪一个接近你的感觉？"},
+    {role: "user", content: "第一个，排除法。像是负形，空白比实线更清楚"}
+  ], {title: "卡尔维诺用排除法围出一座城", card: {understandings: ["《看不见的城市》的写法像负形：写所有能写的城市，围出没写的那一座"], connections: ["卡尔维诺的城市描写 与 绘画里的负形"], themes: ["不直接说的写法"], open: ["被围住的那座城是不是威尼斯"], drift: "从城市本身转向了写法"},
+    topics: [{name: "负形写法", area: "叙事手法"}, {name: "记忆的空间化", area: "叙事手法"}],
+    links: [{a: "负形写法", b: "记忆的空间化", type: "mine", summary: "城市被写成记忆的容器，而记忆靠空白显形"}],
+    review: {loc: "看不见的城市·城市与记忆之三·p.11", before: "读者感觉卡尔维诺每写一座城都在绕着一个不说出口的东西转。", after: "抓到的是排除法：像绘画的负形，写所有城市的反面，围出那座没写的城。", quote: "像是负形，空白比实线更清楚", open: "被围住的那座城是否就是马可·波罗的威尼斯。"}});
+  mk("diverge", b1, now - 20 * H, [
+    {role: "user", content: "突然觉得《看不见的城市》的负形写法和费孝通说的差序格局有点像，都是靠中心往外推，但中心本身是空的"},
+    {role: "assistant", content: "你把**卡尔维诺的负形写法**和**费孝通的差序格局**连起来，凭的是两者都靠一个不被直接描述的中心组织结构。\n公认的对应里，这接近结构主义所说的**空位**。\n一个问题：在差序格局里，那个空的中心是“自己”，在卡尔维诺那里是什么？"},
+    {role: "user", content: "可能也是自己，叙述者自己。马可波罗讲的每座城都是在讲他自己"}
+  ], {title: "负形写法连上差序格局", card: {understandings: [], connections: ["卡尔维诺的负形写法 与 费孝通的差序格局：都由一个不被直接描述的中心组织"], themes: ["空的中心"], open: ["空的中心在两个文本里是否同一种东西"], drift: "从文学写法跨到社会结构"},
+    topics: [{name: "空的中心", area: "叙事手法"}, {name: "负形写法", area: "叙事手法"}, {name: "差序格局", area: "社会结构"}],
+    links: [{a: "负形写法", b: "差序格局", type: "mine", summary: "两者都由一个不被直接描述的中心组织结构"}, {a: "空的中心", b: "差序格局", type: "mine", summary: "差序格局的中心是“自己”，卡尔维诺的中心是叙述者"}, {a: "空的中心", b: "结构主义", type: "known", summary: "结构主义里的“空位”概念"}],
+    review: {loc: "看不见的城市（全书）× 乡土中国·差序格局", before: "读者把卡尔维诺的负形写法和费孝通的差序格局连起来，凭的是两者都由一个空着的中心向外推。", after: "差序格局的中心是“自己”；在《看不见的城市》里，空着的中心可能是叙述者马可·波罗自己。", quote: "马可波罗讲的每座城都是在讲他自己", open: "两个空的中心是不是同一种东西。"}});
+  cap(b1, "城市与欲望之五", "46", [], "第五组中段；尚未讨论", now - 3 * H);
+  render();
+}
+
+/* ---------- events ---------- */
+document.addEventListener("click", e => {
+  const a = e.target.closest("[data-act]"); if(!a) return;
+  const act = a.dataset.act, id = a.dataset.id;
+  switch(act){
+    case "tab": st.tab = a.dataset.tab; st.view = null; st.confirm = null; render(); window.scrollTo(0, 0); break;
+    case "pick-mode": st.newMode = a.dataset.mode; render(); break;
+    case "start": startSession(st.newMode, $("#newbook")?.value || null); break;
+    case "open-session": st.view = {type: "session", id}; closeSheet(); render(); break;
+    case "back": st.view = null; st.confirm = null; render(); window.scrollTo(0, 0); break;
+    case "send": send(); break;
+    case "stop": st.ctl && st.ctl.abort(); break;
+    case "end": endSession(); break;
+    case "reopen": { const s = activeSession(); if(s){ s.endedAt = null; Store.put(s); render(); } break; }
+    case "camera": $("#cam").click(); break;
+    case "gallery": $("#gal").click(); break;
+    case "sel-node": st.sel = {type: "node", name: a.dataset.name}; render(); break;
+    case "sel-edge": st.sel = {type: "edge", i: +a.dataset.i}; render(); break;
+    case "area": st.areaFocus = st.areaFocus === a.dataset.area ? null : a.dataset.area; render(); break;
+    case "goto-area": st.view = null; st.tab = "map"; st.areaFocus = a.dataset.area; render(); window.scrollTo(0, 0); break;
+    case "nav": runNav(); break;
+    case "shelf-filter": st.shelfFilter = a.dataset.k; render(); break;
+    case "open-book": st.view = {type: "book", id}; st.confirm = null; render(); window.scrollTo(0, 0); break;
+    case "set-status": { const b = Store.get(id); if(b){ b.status = a.dataset.k; Store.put(b); render(); } break; }
+    case "ask-del-book": st.confirm = id; render(); break;
+    case "cancel-confirm": st.confirm = null; render(); break;
+    case "del-book": Store.del(id); st.confirm = null; st.view = null; st.tab = "shelf"; render(); toast("已删除"); break;
+    case "copy-review": copyReview(Store.get(id)); break;
+    case "load-examples": loadExamples(); break;
+    case "clear-examples": for(const [k, v] of [...Store.items]) if(v.example) Store.items.delete(k); Store.saveLocal(); st.sel = null; st.areaFocus = null; if(st.view && !Store.get(st.view.id)) st.view = null; render(); toast("示例已清除"); break;
+    case "settings": openSettings(); break;
+    case "close-sheet": closeSheet(); break;
+    case "save-api": {
+      const use = (document.querySelector('input[name="src"]:checked') || {}).value || "claude";
+      AI.saveCfg({use, base: $("#api-base").value.trim(), key: $("#api-key").value.trim(), model: $("#api-model").value.trim()});
+      closeSheet(); render(); toast("已保存"); break;
+    }
+    case "export": doExport(); break;
+    case "show-import": $("#io").innerHTML = `<div class="field">把导出的备份内容粘贴进来<textarea class="input" id="import-box" rows="5"></textarea><div><button class="btn small primary" data-act="do-import">导入</button></div><span class="hint">按记录 id 合并，不会删掉现有记录。</span></div>`; break;
+    case "do-import": doImport(); break;
+    case "copy-export": { const t = $("#export-box"); copyText(t.value, t); break; }
+    case "toast-action": { const t = $("#toast"); t.hidden = true; t._action && t._action(); break; }
+  }
+});
+document.addEventListener("submit", e => {
+  const f = e.target.closest("[data-form]"); if(!f) return;
+  e.preventDefault();
+  if(f.dataset.form === "addbook"){
+    const v = $("#addbook").value.trim(); if(!v) return;
+    const ex = findBook(v);
+    if(ex){ toast("书架上已有《" + ex.title + "》"); return; }
+    newBook(v); st.shelfFilter = "reading"; render(); toast("已加入《" + v.replace(/[《》]/g, "") + "》");
+  }
+});
+document.addEventListener("input", e => {
+  if(e.target.id === "box"){ autosize(e.target); const s = activeSession(); if(s){ st.draft = st.draft || {}; st.draft[s.id] = e.target.value; } }
+});
+document.addEventListener("change", e => {
+  if(e.target.id === "author"){ const b = Store.get(e.target.dataset.id); if(b){ b.author = e.target.value.trim(); Store.put(b); } }
+  if(e.target.id === "newbook") st.newBook = e.target.value;
+  if(e.target.id === "cam" || e.target.id === "gal"){ const f = e.target.files[0]; e.target.value = ""; handlePhoto(f); }
+});
+document.addEventListener("keydown", e => {
+  if(e.target.id === "box" && e.key === "Enter" && (e.ctrlKey || e.metaKey)){ e.preventDefault(); send(); }
+  if(e.key === "Escape" && !$("#sheet").hidden) closeSheet();
+});
+$("#sheet").addEventListener("click", e => { if(e.target.id === "sheet") closeSheet(); });
+
+function copyText(text, el){
+  const fallback = () => { if(el){ el.focus(); el.select(); } toast("已选中，长按复制"); };
+  try{ navigator.clipboard.writeText(text).then(() => toast("已复制"), fallback); }catch(err){ fallback(); }
+}
+function copyReview(b){
+  if(!b) return;
+  const revs = reviewEntries(b);
+  const text = "《" + b.title + "》回忆式复习\n\n" + Object.entries(MODES).map(([k, m]) => {
+    const list = revs.filter(s => s.mode === k); if(!list.length) return "";
+    return "【" + m.name + "】\n" + list.map(s => { const r = s.summary.review; return [r.loc, (r.before || "") + (r.after ? " " + r.after : ""), r.quote ? "「" + r.quote + "」" : "", r.open ? "悬而未决：" + r.open : ""].filter(Boolean).join("\n"); }).join("\n\n");
+  }).filter(Boolean).join("\n\n");
+  copyText(text);
+}
+async function doExport(){
+  const data = JSON.stringify({app: "weaver", v: 1, at: new Date().toISOString(), items: [...Store.items.values()].filter(i => !i.example && !i.deleted)}, null, 1);
+  let saved = false;
+  try{
+    const dl = window.claude && typeof claude.use === "function" ? await claude.use("downloads") : null;
+    if(dl){ await dl.save({filename: "编织器备份-" + new Date().toISOString().slice(0, 10) + ".json", data}); saved = true; toast("已导出"); }
+  }catch(e){ if(e && e.code && e.code !== "declined" && e.code !== "cancelled") console.warn(e); }
+  if(!saved){
+    $("#io").innerHTML = `<div class="field">备份内容（复制后自己存一份）<textarea class="input" id="export-box" rows="5" readonly>${esc(data)}</textarea><div><button class="btn small" data-act="copy-export">复制</button></div></div>`;
+  }
+}
+function doImport(){
+  try{
+    const d = JSON.parse($("#import-box").value);
+    const items = Array.isArray(d) ? d : d.items;
+    if(!Array.isArray(items)) throw 0;
+    let n = 0;
+    for(const it of items){ if(!it || !it.id || !it.kind) continue; const cur = Store.items.get(it.id); if(!cur || (it.updatedAt || 0) > (cur.updatedAt || 0)){ Store.items.set(it.id, it); if(Store.col) Store.push(it.id); n++; } }
+    Store.saveLocal(); closeSheet(); render(); toast("导入了 " + n + " 条");
+  }catch(e){ toast("内容不是有效的备份，检查是否完整粘贴"); }
+}
+
+/* ---------- boot ---------- */
+Store.loadLocal();
+render(); setSync();
+AI.init();
+Store.connect().finally(() => {
+  // 第一次打开、还没有任何记录时，放一套示例让三个模块能看出样子
+  let seen = false; try{ seen = !!localStorage.getItem("weaver.seen"); localStorage.setItem("weaver.seen", "1"); }catch(e){}
+  if(!seen && ![...Store.items.values()].some(i => !i.deleted)) loadExamples();
+});
+// 自托管安装后：从系统分享菜单把截图发进来（service worker 先把图暂存在缓存里）
+(async () => {
+  try{
+    if(!("caches" in window) || !new URLSearchParams(location.search).has("shared")) return;
+    history.replaceState(null, "", location.pathname);
+    const c = await caches.open("weaver-share");
+    const res = await c.match("shared-image");
+    if(!res) return;
+    if(!AI.source()){ toast("截图收到了，但还没接 AI。去设置里填好接口后，回到这里刷新就会识别"); return; }
+    const blob = await res.blob();
+    await c.delete("shared-image");
+    handlePhoto(blob);
+  }catch(e){ console.warn(e); }
+})();
+})();
+</script>
+
+</body>
+</html>
